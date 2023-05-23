@@ -4,19 +4,26 @@ arXiv の論文を検索してPDFと書誌データ、chatGPTによる要約情�
 
 ## 準備
 
-`query_arxiv.py` で OpenAI のAPIキーを設定する。
+`local.py` を生成し、その中で OpenAI のAPIキーを設定する。
 ```python
-openai.api_key = 'sk-....'
+API_KEY='sk-###############'
 ```
+
+※ `query_arxiv.py` 中に直接ハードコーディングしても良いですが、セキュリティ上の観点から上の方法を推奨します。
 
 ## uasge:
 
-arXivから論文を検索、xml形式で保存し、要約を作成
+- arXivから論文を検索、xml形式で保存し、要約を作成
 ```console
 $ python query_arxiv.py  [-d directory] [-n num-papers] [-y from-year] "search keywords"  
 ```
 
-ダウンロードした情報からスライド(markdown)を作成
+- IDを直接指定したい場合は、`-i` にIDを指定（`keyword` はxmlの `query` として保存されます）
+```console
+$ python query_arxiv.py [-i arxiv_id] "keyword" 
+```
+
+- ダウンロードした情報からスライド(markdown)を作成
 ```
 $ python mkmd.py [-o output.md] [-d directory] "keyword"
 ```

@@ -1,15 +1,9 @@
+import argparse
 import os
 import io
-import sys
 import time
-import arxiv
-import openai
-import random
 import fitz
-from xml.dom import minidom
 import xmltodict
-import dicttoxml
-import json
 import glob
 import xmltodict
 from PIL import Image
@@ -18,6 +12,7 @@ print(fitz.__doc__)
 
 if not tuple(map(int, fitz.version[0].split("."))) >= (1, 18, 18):
     raise SystemExit("require PyMuPDF v1.18.18+")
+
 
 def recoverpix(doc, item):
     xref = item[0]  # xref of PDF image
@@ -119,6 +114,7 @@ def extract_images_from_pdf(fname, imgdir="./output", min_width=400, min_height=
     print("total time %g sec" % (t1 - t0))
     return xreflist, imglist, images
 
+
 def get_half(fname):
     # Open the PDF file
     pdf_file = fitz.open(fname)
@@ -139,7 +135,6 @@ def get_half(fname):
     return im_cropped
 
 
-
 def make_md(f, dirname, filename, nimages=3, keywords=[]):
     path = f"{dirname}/{filename}"
     with open(path, "r") as fin:
@@ -154,8 +149,8 @@ def make_md(f, dirname, filename, nimages=3, keywords=[]):
     f.write(f"# {dict['title_jp']}\n")
     f.write(f"{dict['title']}\n")
     #authors = ",".join(dict['authors']['item'])
-    #f.write(f"{authors}\n")
-    f.write(f"[{dict['year']}] {dict['keywords']} {dict['entry_id']}\n") 
+    # f.write(f"{authors}\n")
+    f.write(f"[{dict['year']}] {dict['keywords']} {dict['entry_id']}\n")
     f.write(f"__課題__ {dict['problem']}\n")
     f.write(f"__手法__ {dict['method']}\n")
     f.write(f"__結果__ {dict['result']}\n")
@@ -163,14 +158,15 @@ def make_md(f, dirname, filename, nimages=3, keywords=[]):
     pdfname = f"{dirname}/paper.pdf"
     img_cropped = get_half(pdfname)
     img_cropped.save(f"{dirname}/half.png", "PNG")
-    
+
     f.write("\n---\n")
-    f.write('<!-- _class: info -->\n') 
+    f.write('<!-- _class: info -->\n')
     f.write(f'![width:1400]({dirname}/half.png)\n')
 
     # get images
     _, _, image_list = extract_images_from_pdf(pdfname, imgdir=dirname)
-    images = [{'src':imgname, 'pno':str(pno), 'width':str(width), 'height':str(height)} for imgname, pno, width, height in image_list]
+    images = [{'src': imgname, 'pno': str(pno), 'width': str(width), 'height': str(
+        height)} for imgname, pno, width, height in image_list]
     for img in images[:nimages]:
         src = img['src']
         width = (int)(img['width'])
@@ -181,13 +177,14 @@ def make_md(f, dirname, filename, nimages=3, keywords=[]):
         ratio = min(x_ratio, y_ratio)
 
         f.write("\n---\n")
-        f.write('<!-- _class: info -->\n') 
+        f.write('<!-- _class: info -->\n')
         f.write(f'![width:{(int)(ratio * width)}]({dirname}/{src})\n')
+
 
 def main(dir="./xmrs", output="./out.md", keywords=[]):
     print("### dir", dir, "output", output, "keywords", keywords)
-    xmlfiles= glob.glob(f"{dir}/*/*.xml")
-    with open(output, "w") as f:
+    xmlfiles = glob.glob(f"{dir}/*/*.xml")
+    with open(output, "w", encoding='utf-8') as f:
         f.write("---\n")
         f.write("marp: true\n")
         f.write("theme: default\n")
@@ -205,12 +202,13 @@ def main(dir="./xmrs", output="./out.md", keywords=[]):
             make_md(f, dirname, filename, keywords=keywords)
     print("### result stored in", output)
 
-import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dir', "-d", type=str, help='xml dir', default='./xmls')
-    parser.add_argument('--output', "-o", type=str, default='output.md', help='output markdown file')
+    parser.add_argument('--dir', "-d", type=str,
+                        help='xml dir', default='./xmls')
+    parser.add_argument('--output', "-o", type=str,
+                        default='output.md', help='output markdown file')
     parser.add_argument('positional_args', nargs='?', help='query keywords')
     args = parser.parse_args()
 
@@ -219,5 +217,5 @@ if __name__ == "__main__":
         keywords = [keywords]
 
     print(args, keywords)
-    
+
     main(dir=args.dir, output=args.output, keywords=keywords)

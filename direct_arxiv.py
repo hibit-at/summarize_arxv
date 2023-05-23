@@ -8,9 +8,10 @@ import dicttoxml
 from xml.dom import minidom
 
 # OpenAIのapiキー
-
-openai.api_key = 'your openai key' #APIキーをハードコーディングできますが、推奨しません。
-if os.path.exists('local.py'):
+if not os.path.exists('local.py'):
+    print('「local.py」という py ファイルを作り、その中で API_KEY という文字列を定義して、API キーを設定してください')
+    exit()
+else:
     from local import API_KEY
     openai.api_key = API_KEY
 
@@ -27,6 +28,7 @@ prompt = """与えられた論文の要点をまとめ、以下の項目で日�
 def get_summary(result):
     text = f"title: {result.title}\nbody: {result.summary}"
     print("### input text", text)
+    # print("### input prompt", prompt)
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         # model='gpt-4',
@@ -86,38 +88,26 @@ def get_paper_info(result, dirpath="./xmls"):
     return root
 
 
-def main(query, a_id, dir='./xmls', num_papers=3, from_year=2017, max_results=100):
+def main(query, a_id, dir='./xmls'):
 
-    # if arxiv_id is fixed, search it directly
-    if a_id != '':
-        search = arxiv.Search(
-            query=f'id:{a_id}',
-            max_results=1,
-        )
-    # if arxiv_is not fixed, search normally
-    else:
-        search = arxiv.Search(
-            query=query,
-            max_results=max_results,
-            sort_by=arxiv.SortCriterion.SubmittedDate,
-            sort_order=arxiv.SortOrder.Descending,
-        )
+    search = arxiv.Search(
+        query=f'id:{a_id}',
+        max_results=1,
+    )
     result_list = []
+
     for result in search.results():
         print(result, result.published.year, result.title)
-        if result.published.year >= from_year:
-            result_list.append(result)
+        result_list.append(result)
 
     if len(result_list) <= 0:
         print("#### no result")
         sys.exit()
 
+    results = result_list
+
     if not os.path.exists(dir):  # make subfolder if necessary
         os.mkdir(dir)
-
-    results = random.sample(result_list, k=num_papers) if num_papers > 0 and len(
-        result_list) > num_papers else result_list
-
     for i, result in enumerate(results):
         try:
             id = result.entry_id.replace("http://", "").replace("/", "-")
@@ -130,7 +120,7 @@ def main(query, a_id, dir='./xmls', num_papers=3, from_year=2017, max_results=10
             xml = minidom.parseString(xml).toprettyxml(indent="   ")
             print("###########\n", xml, "\n#######")
 
-            with open(f"{dirpath}/paper.xml", "w") as f:
+            with open(f"{dirpath}/paper.xml", "w", encoding='utf-8') as f:
                 f.write(xml)
         except Exception as e:
             print("Exception", e)
@@ -138,20 +128,13 @@ def main(query, a_id, dir='./xmls', num_papers=3, from_year=2017, max_results=10
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--year', '-y', type=int,
-                        help='from year', default=2017)
+    parser.add_argument('--a_id', '-i', type=str,
+                        help='arxiv id')
     parser.add_argument('--dir', "-d", type=str,
                         help='destination', default='./xmls')
-    parser.add_argument('--num', "-n", type=int,
-                        help='number of papers', default=0)
-    # if "a_id" is added, then fix ID
-    parser.add_argument('--a_id', "-i", type=str,
-                        help='arxiv_id', default='')
-
     parser.add_argument('positional_args', nargs='+', help='query keywords')
     args = parser.parse_args()
 
     print(args)
 
-    main(query=f'all:%22 {" ".join(args.positional_args)} %22',
-         a_id=args.a_id, num_papers=args.num, from_year=args.year, dir=args.dir)
+    main(a_id=args.a_id, dir=args.dir,query=f'all:%22 {" ".join(args.positional_args)} %22')
